@@ -255,8 +255,19 @@ static inline void filters_apply_brightness_contrast(
 
 #if defined x86_32_CPU
 
+    // Process 16 color channels at the same time.
     __asm__ __volatile__ (
-        "\n\t" :::
+        "vbroadcastss (%0), %%zmm2\n\t"
+        "vbroadcastss (%1), %%zmm1\n\t"
+        "vpmovzxbd (%2, %3), %%zmm0\n\t"
+        "vcvtdq2ps %%zmm0, %%zmm0\n\t"
+        "vfmadd132ps %%zmm1, %%zmm2, %%zmm0\n\t"
+        "vcvtps2dq %%zmm0, %%zmm0\n\t"
+        "vpmovusdb %%zmm0, (%2, %3)\n\t"
+    ::
+        "S"(&brightness), "D"(&contrast), "b"(pixels), "c"(position)
+    :
+        "%zmm0", "%zmm1", "%zmm2"
     );
 
 #elif defined x86_64_CPU
